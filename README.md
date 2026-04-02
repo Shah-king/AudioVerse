@@ -17,19 +17,91 @@ Replace this paragraph with your own summary of what your version does.
 
 ## How The System Works
 
-Explain your design in plain language.
+### Real-World Context
 
-Some prompts to answer:
+Major streaming platforms like Spotify and YouTube use two complementary recommendation approaches:
 
-- What features does each `Song` use in your system
-  - For example: genre, mood, energy, tempo
-- What information does your `UserProfile` store
-- How does your `Recommender` compute a score for each song
-- How do you choose which songs to recommend
+1. **Collaborative Filtering**: Analyzes *other users' behavior* — if thousands of users with similar listening histories loved Song X, you probably will too. Powerful but requires massive datasets and struggles with new users/songs.
 
-You can include a simple diagram or bullet list if helpful.
+2. **Content-Based Filtering**: Analyzes *song attributes* — if you loved an energetic happy song, we recommend other energetic happy songs. Works immediately for new users and handles new content well, but can feel repetitive.
 
----
+**This simulation focuses on content-based filtering** because it's more transparent, works with small datasets, and teaches the core principles of feature-driven recommendations.
+
+### What The System Prioritizes
+
+The recommender will:
+- Match users to songs based on **audio/mood characteristics**, not popularity or trends
+- Score each song individually (how similar is it to what you like?)
+- Return the top-k highest scoring songs in order
+
+### Song Features
+
+Each `Song` object captures audio and categorical information:
+
+| Feature | Type | Example | Purpose |
+|---------|------|---------|---------|
+| `id` | int | 1 | Unique identifier |
+| `title` | str | "Sunrise City" | Display name |
+| `artist` | str | "Neon Echo" | Creator |
+| `genre` | str | "pop" | Category grouping |
+| `mood` | str | "happy" | Emotional tone (key matching feature) |
+| `energy` | float | 0.82 | Intensity level (0.0 to 1.0) |
+| `tempo_bpm` | float | 118 | Beats per minute |
+| `valence` | float | 0.84 | Musical positivity (0.0 to 1.0) |
+| `danceability` | float | 0.79 | How danceable (0.0 to 1.0) |
+| `acousticness` | float | 0.18 | Production style (0.0 acoustic, 1.0 electronic) |
+
+### UserProfile Features
+
+Each `UserProfile` stores what the user likes:
+
+| Feature | Type | Example | Purpose |
+|---------|------|---------|---------|
+| `favorite_genre` | str | "pop" | Preferred music category |
+| `favorite_mood` | str | "happy" | Mood they want to hear |
+| `target_energy` | float | 0.82 | Preferred intensity level (0.0-1.0) |
+| `likes_acoustic` | bool | True | Production preference (acoustic vs electronic) |
+
+### How Scoring Works
+
+For each song candidate, the recommender calculates a **match score** (0.0 to 1.0):
+
+```
+score = (
+  mood_match(user.favorite_mood, song.mood) × 0.35 +
+  energy_similarity(user.target_energy, song.energy) × 0.25 +
+  genre_match(user.favorite_genre, song.genre) × 0.20 +
+  acoustic_preference(user.likes_acoustic, song.acousticness) × 0.15 +
+  valence_bonus(song.valence) × 0.05
+)
+```
+
+**Example**: User loves happy, high-energy pop with acoustic elements
+
+- Song: "Rooftop Lights" (happy pop, 0.76 energy, 0.35 acoustic)
+  - Mood match: 1.0 (happy = happy) ✓
+  - Energy: 0.99 (0.76 ≈ 0.82) ✓
+  - Genre: 1.0 (pop = pop) ✓
+  - **Score: 0.95 / 1.0** → **Recommend!**
+
+- Song: "Library Rain" (chill lofi, 0.35 energy, 0.86 acoustic)
+  - Mood match: 0.5 (chill ≠ happy) ✗
+  - Energy: 0.60 (0.35 very different from 0.82) ✗
+  - **Score: 0.48 / 1.0** → **Not recommended**
+
+### Recommendation Process
+
+```
+User Profile (e.g., loves happy pop with ~0.8 energy)
+         ↓
+  Load all songs from catalog
+         ↓
+  Score each song (how well does it match the user?)
+         ↓
+  Sort by score (highest first)
+         ↓
+  Return top-k recommendations with explanations
+``` 
 
 ## Getting Started
 
