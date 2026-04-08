@@ -98,7 +98,7 @@ Interpretation: 6.0+ = Excellent | 4.5–5.9 = Good | 3.0–4.4 = Moderate | <3.
   - Tempo bonus: 0.5 (78 in range [70, 100]) ✓
   - Dance bonus: 0.5 (0.62 in range [0.40, 0.70]) ✓
   - Acoustic bonus: 0.5 (0.71 in range [0.60, 1.0]) ✓
-  - **Score: 5.96 / 6.5 (92%)** → **TOP RECOMMENDATION** ✅
+  - **Score: 5.96 / 6.5 (92%)** → **TOP RECOMMENDATION** 
 
 - Song: "Storm Runner" (rock, intense, energy 0.91, tempo 152, danceability 0.66, acousticness 0.10)
   - Genre match: 0.0 (rock ≠ lofi) ✗
@@ -173,6 +173,10 @@ pip install -r requirements.txt
 ```bash
 python -m src.main
 ```
+
+**Expected output:**
+
+![CLI screenshot of music recommendations](assets/Music_recommend.png)
 
 ### Running Tests
 

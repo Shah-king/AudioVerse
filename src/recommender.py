@@ -63,6 +63,7 @@ class Recommender:
         self.songs = songs
 
     def _score(self, song: Song, user: UserProfile) -> float:
+        """Return the total recommendation score for a song against a user profile."""
         score = 0.0
 
         # Genre match: +2.0
@@ -91,10 +92,12 @@ class Recommender:
         return score
 
     def recommend(self, user: UserProfile, k: int = 5) -> List[Song]:
+        """Return the top-k songs ranked by score for the given user profile."""
         ranked = sorted(self.songs, key=lambda s: self._score(s, user), reverse=True)
         return ranked[:k]
 
     def explain_recommendation(self, user: UserProfile, song: Song) -> str:
+        """Return a human-readable score breakdown explaining why a song was recommended."""
         reasons = []
         score = 0.0
 
@@ -184,7 +187,7 @@ def _score_song(song: Dict, user_prefs: Dict) -> Tuple[float, str]:
     if "energy" in user_prefs:
         energy_sim = max(0.0, 1.0 - abs(song.get("energy", 0.0) - user_prefs["energy"])) * 2.0
         score += energy_sim
-        reasons.append(f"energy {energy_sim:.2f}/2.0")
+        reasons.append(f"energy similarity (+{energy_sim:.2f})")
 
     # Danceability bonus: +0.5 if within ±0.15
     if "danceability" in user_prefs:
