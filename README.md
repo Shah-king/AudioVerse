@@ -62,46 +62,94 @@ Each `UserProfile` stores what the user likes:
 | `target_energy` | float | 0.82 | Preferred intensity level (0.0-1.0) |
 | `likes_acoustic` | bool | True | Production preference (acoustic vs electronic) |
 
-### How Scoring Works
+### Algorithm Recipe: Point-Based Scoring (6.5 Max)
 
-For each song candidate, the recommender calculates a **match score** (0.0 to 1.0):
+For each song candidate, the recommender calculates a **match score** on a 6.5-point scale:
 
 ```
-score = (
-  mood_match(user.favorite_mood, song.mood) × 0.35 +
-  energy_similarity(user.target_energy, song.energy) × 0.25 +
-  genre_match(user.favorite_genre, song.genre) × 0.20 +
-  acoustic_preference(user.likes_acoustic, song.acousticness) × 0.15 +
-  valence_bonus(song.valence) × 0.05
-)
+final_score = genre_points + mood_points + energy_points + tempo_bonus + dance_bonus + acoustic_bonus
+
+Where:
+  genre_points = 2.0 if song.genre == user.favorite_genre, else 0.0
+  mood_points = 1.0 if song.mood in user.favorite_moods, else 0.0
+  energy_points = (1.0 - |user.target_energy - song.energy|) × 2.0  (range: 0.0–2.0)
+  tempo_bonus = 0.5 if song.tempo in [user.min_tempo, user.max_tempo], else 0.0
+  dance_bonus = 0.5 if song.danceability in [user.min_dance, user.max_dance], else 0.0
+  acoustic_bonus = 0.5 if song.acousticness in [user.min_acoustic, user.max_acoustic], else 0.0
+
+Final Score Range: 0.0 to 6.5 points
+Interpretation: 6.0+ = Excellent | 4.5–5.9 = Good | 3.0–4.4 = Moderate | <3.0 = Weak
 ```
 
-**Example**: User loves happy, high-energy pop with acoustic elements
+**Logic Flow:**
+1. Check if genre matches → if yes, +2.0 pts (foundation layer)
+2. Check if mood matches → if yes, +1.0 pt (foundation layer)
+3. Calculate energy similarity based on distance → 0.0–2.0 pts (ranking layer)
+4. Check if secondary features (tempo, danceability, acousticness) are in acceptable ranges → +0.5 each (refinement layer)
+5. Sum all components to get final score
+6. Rank songs by score descending and return top-k
 
-- Song: "Rooftop Lights" (happy pop, 0.76 energy, 0.35 acoustic)
-  - Mood match: 1.0 (happy = happy) ✓
-  - Energy: 0.99 (0.76 ≈ 0.82) ✓
-  - Genre: 1.0 (pop = pop) ✓
-  - **Score: 0.95 / 1.0** → **Recommend!**
+**Example**: User loves lofi/chill with energy ~0.40
 
-- Song: "Library Rain" (chill lofi, 0.35 energy, 0.86 acoustic)
-  - Mood match: 0.5 (chill ≠ happy) ✗
-  - Energy: 0.60 (0.35 very different from 0.82) ✗
-  - **Score: 0.48 / 1.0** → **Not recommended**
+- Song: "Midnight Coding" (lofi, chill, energy 0.42, tempo 78, danceability 0.62, acousticness 0.71)
+  - Genre match: 2.0 (lofi = lofi) ✓
+  - Mood match: 1.0 (chill in favorites) ✓
+  - Energy: (1 - |0.40 - 0.42|) × 2.0 = 1.96 ✓
+  - Tempo bonus: 0.5 (78 in range [70, 100]) ✓
+  - Dance bonus: 0.5 (0.62 in range [0.40, 0.70]) ✓
+  - Acoustic bonus: 0.5 (0.71 in range [0.60, 1.0]) ✓
+  - **Score: 5.96 / 6.5 (92%)** → **TOP RECOMMENDATION** ✅
+
+- Song: "Storm Runner" (rock, intense, energy 0.91, tempo 152, danceability 0.66, acousticness 0.10)
+  - Genre match: 0.0 (rock ≠ lofi) ✗
+  - Mood match: 0.0 (intense ≠ chill) ✗
+  - Energy: (1 - |0.40 - 0.91|) × 2.0 = 0.18 ✗
+  - Tempo bonus: 0.0 (152 outside range [70, 100]) ✗
+  - Dance bonus: 0.5 (0.66 in range [0.40, 0.70]) ✓
+  - Acoustic bonus: 0.0 (0.10 outside range [0.60, 1.0]) ✗
+  - **Score: 0.68 / 6.5 (10%)** → **NOT RECOMMENDED** ✗
+
+### Potential Biases and Limitations
+
+This point-based system has known characteristics that may bias recommendations:
+
+| Bias | Description | Impact |
+|------|-------------|--------|
+| **Genre Gatekeeping** | Genre is weighted heavily (2.0 of 6.5 pts). A user who loves "pop" will almost never see "rock" songs, even if they contain moods/energy the user typically enjoys. | Limits discovery across genre boundaries. May miss cross-genre gems. |
+| **Mood Dominance** | If a song's mood doesn't match user preferences, it's hard to recover (starting from 0 vs 3.0). A "happy rock" song won't overcome "rock" genre penalty for a "mellow pop" user. | Reduces serendipitous recommendations. May miss songs that *feel* right despite wrong label. |
+| **Energy Neglects Context** | Energy similarity treats all mismatches equally. A user wanting 0.4 energy treats 0.8 (2× too high) the same as 0.0 (4× too low). | May not penalize extreme mismatches enough. A user's "workout" context isn't captured. |
+| **Binary Secondary Features** | Tempo/danceability/acousticness use hard range cutoffs (in/out). A song with tempo 99 bpm gets 0.5 bonus; a song at 100 bpm (1 bpm within range) gets full 0.5 bonus. | Songs just outside accepted ranges are unfairly penalized. Discontinuous scoring. |
+| **No Popularity or Temporal Context** | All songs scored equally regardless of age, popularity, or context (workout vs study). A 10-year-old deep cut scores the same as a trending hit if features match. | May recommend obscure songs that technically match but aren't culturally relevant right now. |
+| **First-Time User Cold Start** | New users with limited preference history will get generic recommendations until history builds. | Early user experience may be poor. |
+
+**Known Workarounds:**
+- Add genre similarity (partial credit for related genres like "pop" → "indie pop")
+- Add user context ("workout" boosts high energy, "study" boosts low energy)
+- Weight popularity slightly (+0.1 bonus for trending songs)
+- Normalize range bonuses to use similarity instead of hard cutoffs
 
 ### Recommendation Process
 
+```mermaid
+flowchart TD
+    A["songs.csv"] -->|load_songs| B["song dict\ngenre · mood · energy\ntempo · danceability · acousticness"]
+    B --> C["_score_song(song, user_prefs)"]
+    C --> D{"song.genre ==\nuser.genre?"}
+    D -- "Yes → +2.0" --> E["accumulate score"]
+    D -- "No  → +0.0" --> E
+    E --> F{"song.mood in\nuser.moods?"}
+    F -- "Yes → +1.0" --> G["accumulate score"]
+    F -- "No  → +0.0" --> G
+    G --> H["energy similarity\n(1 − |diff|) × 2.0  →  0 to 2.0 pts"]
+    H --> I["accumulate score"]
+    I --> J{"acousticness\nmatches preference?"}
+    J -- "Yes → +0.5" --> K["accumulate score"]
+    J -- "No  → +0.0" --> K
+    K --> L["(song, final_score, explanation)"]
+    L --> M["pool with all other scored songs"]
+    M --> N["sort by score descending"]
+    N --> O["top-k ranked list"]
 ```
-User Profile (e.g., loves happy pop with ~0.8 energy)
-         ↓
-  Load all songs from catalog
-         ↓
-  Score each song (how well does it match the user?)
-         ↓
-  Sort by score (highest first)
-         ↓
-  Return top-k recommendations with explanations
-``` 
 
 ## Getting Started
 
@@ -174,110 +222,4 @@ Write 1 to 2 paragraphs here about what you learned:
 - about where bias or unfairness could show up in systems like this
 
 
----
-
-## 7. `model_card_template.md`
-
-Combines reflection and model card framing from the Module 3 guidance. :contentReference[oaicite:2]{index=2}  
-
-```markdown
-# 🎧 Model Card - Music Recommender Simulation
-
-## 1. Model Name
-
-Give your recommender a name, for example:
-
-> VibeFinder 1.0
-
----
-
-## 2. Intended Use
-
-- What is this system trying to do
-- Who is it for
-
-Example:
-
-> This model suggests 3 to 5 songs from a small catalog based on a user's preferred genre, mood, and energy level. It is for classroom exploration only, not for real users.
-
----
-
-## 3. How It Works (Short Explanation)
-
-Describe your scoring logic in plain language.
-
-- What features of each song does it consider
-- What information about the user does it use
-- How does it turn those into a number
-
-Try to avoid code in this section, treat it like an explanation to a non programmer.
-
----
-
-## 4. Data
-
-Describe your dataset.
-
-- How many songs are in `data/songs.csv`
-- Did you add or remove any songs
-- What kinds of genres or moods are represented
-- Whose taste does this data mostly reflect
-
----
-
-## 5. Strengths
-
-Where does your recommender work well
-
-You can think about:
-- Situations where the top results "felt right"
-- Particular user profiles it served well
-- Simplicity or transparency benefits
-
----
-
-## 6. Limitations and Bias
-
-Where does your recommender struggle
-
-Some prompts:
-- Does it ignore some genres or moods
-- Does it treat all users as if they have the same taste shape
-- Is it biased toward high energy or one genre by default
-- How could this be unfair if used in a real product
-
----
-
-## 7. Evaluation
-
-How did you check your system
-
-Examples:
-- You tried multiple user profiles and wrote down whether the results matched your expectations
-- You compared your simulation to what a real app like Spotify or YouTube tends to recommend
-- You wrote tests for your scoring logic
-
-You do not need a numeric metric, but if you used one, explain what it measures.
-
----
-
-## 8. Future Work
-
-If you had more time, how would you improve this recommender
-
-Examples:
-
-- Add support for multiple users and "group vibe" recommendations
-- Balance diversity of songs instead of always picking the closest match
-- Use more features, like tempo ranges or lyric themes
-
----
-
-## 9. Personal Reflection
-
-A few sentences about what you learned:
-
-- What surprised you about how your system behaved
-- How did building this change how you think about real music recommenders
-- Where do you think human judgment still matters, even if the model seems "smart"
 
