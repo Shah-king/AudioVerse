@@ -71,9 +71,10 @@ class Recommender:
             score += 2.0
 
         # Mood match: +1.0 (supports comma-separated list in favorite_mood)
-        user_moods = [m.strip() for m in user.favorite_mood.split(",")]
-        if song.mood in user_moods:
-            score += 1.0
+        # EXPERIMENT: mood check temporarily disabled to observe ranking changes
+        # user_moods = [m.strip() for m in user.favorite_mood.split(",")]
+        # if song.mood in user_moods:
+        #     score += 1.0
 
         # Energy similarity: (1 − |diff|) × 2.0  →  max 2.0
         score += max(0.0, 1.0 - abs(song.energy - user.target_energy)) * 2.0
@@ -177,11 +178,12 @@ def _score_song(song: Dict, user_prefs: Dict) -> Tuple[float, str]:
         reasons.append(f"genre '{song['genre']}' (+2.0)")
 
     # Mood: +1.0 (accept str or list)
-    user_mood = user_prefs.get("mood", "")
-    user_moods = user_mood if isinstance(user_mood, list) else [user_mood]
-    if song.get("mood") in user_moods:
-        score += 1.0
-        reasons.append(f"mood '{song['mood']}' (+1.0)")
+    # EXPERIMENT: mood check temporarily disabled to observe ranking changes
+    # user_mood = user_prefs.get("mood", "")
+    # user_moods = user_mood if isinstance(user_mood, list) else [user_mood]
+    # if song.get("mood") in user_moods:
+    #     score += 1.0
+    #     reasons.append(f"mood '{song['mood']}' (+1.0)")
 
     # Energy similarity: max 2.0
     if "energy" in user_prefs:

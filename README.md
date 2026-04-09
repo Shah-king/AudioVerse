@@ -176,7 +176,18 @@ python -m src.main
 
 **Expected output:**
 
-![CLI screenshot of music recommendations](assets/Music_recommend.png)
+| Profile | Screenshot |
+|---------|------------|
+| **High-Energy Pop** — genre: pop, mood: happy, energy: 0.9 | ![High-Energy Pop CLI output](assets/Music_recommend.png) |
+| **Chill Lofi** — genre: lofi, mood: chill, energy: 0.35 | ![Chill Lofi CLI output](assets/recommend1.png) |
+| **Deep Intense Rock** — genre: rock, mood: intense, energy: 0.92 | ![Deep Intense Rock CLI output](assets/recommend2.png) |
+| **Ghost Mood** *(edge case)* — pop genre, mood `melancholic` absent from dataset | ![Ghost Mood CLI output](assets/recommend3.png) |
+| **Unknown Genre** *(edge case)* — genre `metal` not in songs.csv; energy drives all results | ![Unknown Genre CLI output](assets/recommend4.png) |
+| **Dead Silent** *(edge case)* — energy: 0.0; high-energy songs not penalized enough | ![Dead Silent CLI output](assets/recommend5.png) |
+| **Sad Headbanger** *(edge case)* — conflicting prefs: melancholic mood + energy: 1.0 | ![Sad Headbanger CLI output](assets/recommend6.png) |
+| **Dead Average** *(edge case)* — energy: 0.5; energy stops differentiating songs | ![Dead Average CLI output](assets/recommend7.png) |
+
+
 
 ### Running Tests
 
