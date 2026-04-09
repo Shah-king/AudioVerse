@@ -10,6 +10,7 @@ You will implement the functions in recommender.py:
 """
 
 from pathlib import Path
+from tabulate import tabulate
 from recommender import load_songs, recommend_songs
 
 DATA_PATH = Path(__file__).parent.parent / "data" / "songs.csv"
@@ -109,8 +110,8 @@ USER_PROFILES = {
 
 
 def print_recommendations(recommendations: list, user_prefs: dict, label: str = "") -> None:
-    """Prints a clean, readable summary of the top-k recommendations."""
-    width = 52
+    """Prints a formatted table summary of the top-k recommendations."""
+    width = 72
 
     print("\n" + "=" * width)
     print(f"  {label}" if label else "  Music Recommendations")
@@ -119,18 +120,25 @@ def print_recommendations(recommendations: list, user_prefs: dict, label: str = 
           f"Energy: {user_prefs.get('energy','?')}")
     print("=" * width)
 
+    rows = []
     for rank, (song, score, explanation) in enumerate(recommendations, start=1):
-        print(f"\n  #{rank}  {song['title']}  -  {song['artist']}")
-        print(f"       Score: {score:.2f} / 6.0")
-        print(f"       Why:   ", end="")
-
-        # Print each reason on its own indented line
+        # Wrap each reason onto its own line inside the cell
         reasons = explanation.split("; ")
-        print(reasons[0])
-        for reason in reasons[1:]:
-            print(f"              {reason}")
+        reasons_cell = "\n".join(f"- {r}" for r in reasons)
+        rows.append([
+            f"#{rank}",
+            f"{song['title']}\n{song['artist']}",
+            f"{score:.2f} / 6.0",
+            reasons_cell,
+        ])
 
-    print("\n" + "=" * width + "\n")
+    print(tabulate(
+        rows,
+        headers=["Rank", "Song / Artist", "Score", "Why"],
+        tablefmt="outline",
+        colalign=("center", "left", "center", "left"),
+    ))
+    print()
 
 
 def main() -> None:
