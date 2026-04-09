@@ -5,7 +5,7 @@
 Give your model a short, descriptive name.  
 Example: **VibeFinder 1.0**  
 
-**VibeMatch 1.0** — a point-based music recommender that scores songs against a listener's taste profile and returns the top matches.
+**AudioVerse** — a point-based music recommender that scores songs against a listener's taste profile and returns the top matches.
 
 ---
 
