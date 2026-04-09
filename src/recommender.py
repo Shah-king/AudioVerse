@@ -178,12 +178,11 @@ def _score_song(song: Dict, user_prefs: Dict) -> Tuple[float, str]:
         reasons.append(f"genre '{song['genre']}' (+2.0)")
 
     # Mood: +1.0 (accept str or list)
-    # EXPERIMENT: mood check temporarily disabled to observe ranking changes
-    # user_mood = user_prefs.get("mood", "")
-    # user_moods = user_mood if isinstance(user_mood, list) else [user_mood]
-    # if song.get("mood") in user_moods:
-    #     score += 1.0
-    #     reasons.append(f"mood '{song['mood']}' (+1.0)")
+    user_mood = user_prefs.get("mood", "")
+    user_moods = user_mood if isinstance(user_mood, list) else [user_mood]
+    if song.get("mood") in user_moods:
+        score += 1.0
+        reasons.append(f"mood '{song['mood']}' (+1.0)")
 
     # Energy similarity: max 2.0
     if "energy" in user_prefs:
@@ -207,14 +206,67 @@ def _score_song(song: Dict, user_prefs: Dict) -> Tuple[float, str]:
     return score, explanation
 
 
+def _apply_diversity_penalty(
+    ranked: List[Tuple[Dict, float, str]],
+    artist_penalty: float = 1.0,
+    genre_penalty: float = 0.5,
+) -> List[Tuple[Dict, float, str]]:
+    """
+    Post-processing reranker that builds the final top-k list one slot at a time.
+
+    For each candidate (already sorted by raw score), penalties are applied
+    based on what has already been selected:
+      - artist already in results  → subtract artist_penalty (default -1.0)
+      - genre already in results   → subtract genre_penalty  (default -0.5)
+
+    Penalties stack: a song whose artist AND genre both repeat loses both.
+    The adjusted score is used only for slot ordering — the explanation records
+    what was deducted so the output stays transparent.
+    """
+    selected: List[Tuple[Dict, float, str]] = []
+    seen_artists: set = set()
+    seen_genres: set = set()
+
+    for song, score, explanation in ranked:
+        adjusted = score
+        penalty_notes = []
+
+        if song["artist"] in seen_artists:
+            adjusted -= artist_penalty
+            penalty_notes.append(f"artist repetition penalty (-{artist_penalty:.1f})")
+
+        if song["genre"] in seen_genres:
+            adjusted -= genre_penalty
+            penalty_notes.append(f"genre repetition penalty (-{genre_penalty:.1f})")
+
+        if penalty_notes:
+            explanation = explanation + "; " + "; ".join(penalty_notes)
+
+        selected.append((song, adjusted, explanation))
+        seen_artists.add(song["artist"])
+        seen_genres.add(song["genre"])
+
+    # Re-sort after penalties so a heavily penalized song can fall below
+    # a candidate that was originally ranked lower but is more diverse.
+    selected.sort(key=lambda x: x[1], reverse=True)
+    return selected
+
+
 def recommend_songs(user_prefs: Dict, songs: List[Dict], k: int = 5) -> List[Tuple[Dict, float, str]]:
     """
-    Scores all songs against user_prefs, returns top-k as (song, score, explanation).
+    Scores all songs against user_prefs, applies diversity reranking,
+    and returns top-k as (song, score, explanation).
     Required by src/main.py
     """
     results = []
     for song in songs:
         score, explanation = _score_song(song, user_prefs)
         results.append((song, score, explanation))
+
+    # Step 1: rank by raw score
     results.sort(key=lambda x: x[1], reverse=True)
+
+    # Step 2: apply diversity penalties (post-processing)
+    results = _apply_diversity_penalty(results)
+
     return results[:k]

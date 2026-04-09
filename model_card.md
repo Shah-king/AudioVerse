@@ -49,6 +49,13 @@ Every song in the catalog gets a score out of 6.0 based on how well it matches w
 
 All 18 songs are scored, then sorted from highest to lowest. The top 5 are returned along with a plain-English explanation of which features contributed to each score.
 
+**Diversity reranking (added after initial experiments):**
+After the raw scores are calculated, a second pass runs before returning the final list. It walks through the ranked candidates one slot at a time and checks whether the artist or genre has already been selected. If so, it applies a penalty to that song's score:
+- Repeated artist: −1.0 points
+- Repeated genre: −0.5 points
+
+Both penalties can stack. The adjusted score is used only for final slot ordering — the original raw score is not changed. The reason for any penalty is added to the explanation (e.g., "artist repetition penalty (−1.0)") so the output stays transparent. This means the top 5 results are now more likely to include a variety of artists and genres instead of being dominated by one.
+
 ---
 
 ## 4. Data  
@@ -90,6 +97,8 @@ The system works best when the user's genre and mood are both present in the cat
 - **Deep Intense Rock** also gave a strong #1 (Storm Runner at 5.98/6.0) because the genre and mood both existed in the dataset.
 - The score explanation is easy to read and clearly shows why each song was picked, which makes the output feel trustworthy.
 - The energy similarity formula works well as a ranking layer within genre groups — small energy differences produce small score differences, which feels proportional.
+- The terminal output now uses a formatted ASCII table (via `tabulate`) with columns for rank, song/artist, score, and reasons. Each scoring reason appears on its own line inside the Why column, including any diversity penalties, making it easy to compare results across profiles at a glance.
+- The diversity reranker visibly improves variety in profiles where the dataset clusters heavily around one genre. For Chill Lofi, Spacewalk Thoughts and Tropical Breeze now appear in the top 5 instead of a third lofi song, which feels more like real discovery.
 
 ---
 
@@ -122,7 +131,9 @@ Prompts:
 
 No need for numeric metrics unless you created some.
 
-I tested the first three profiles — High-Energy Pop, Chill Lofi, and Deep Intense Rock — by running the recommender and checking whether the top-5 results matched what I would intuitively expect for each listener type. For High-Energy Pop, I looked at whether the top song matched on both genre and mood, and whether the score gap between #1 and #2 was meaningful. What I found was that mood acted as a decisive tiebreaker within the same genre: Sunrise City (pop, happy) ranked above Gym Hero (pop, intense) by exactly 1.0 point — the mood bonus — even though Gym Hero had a slightly closer energy match. To confirm this, I temporarily disabled the mood check entirely and observed that Gym Hero immediately jumped to #1, while Sunrise City fell to #2. This experiment revealed that mood is a critical factor specifically when two songs share the same genre, since the genre bonus already equalizes their base scores and mood becomes the only meaningful differentiator. However, mood alone could not overcome a genre mismatch — Rooftop Lights, which correctly matched the happy mood, still ranked far below both pop songs because it lost the full 2.0-point genre bonus.
+I tested the first three profiles — High-Energy Pop, Chill Lofi, and Deep Intense Rock — by running the recommender and checking whether the top-5 results matched what I would intuitively expect for each listener type. For High-Energy Pop, I looked at whether the top song matched on both genre and mood, and whether the score gap between #1 and #2 was meaningful. What I found was that mood acted as a decisive tiebreaker within the same genre: Sunrise City (pop, happy) ranked above Gym Hero (pop, intense) by exactly 1.0 point — the mood bonus — even though Gym Hero had a slightly closer energy match. To confirm this, I temporarily disabled the mood check entirely and observed that Gym Hero immediately jumped to #1, while Sunrise City fell to #2. This experiment revealed that mood is a critical factor specifically when two songs share the same genre, since the genre bonus already equalizes their base scores and mood becomes the only meaningful differentiator. However, mood alone could not overcome a genre mismatch — Rooftop Lights, which correctly matched the happy mood, still ranked far below both pop songs because it lost the full 2.0-point genre bonus. The mood check was restored after this experiment.
+
+After adding the diversity reranker, I re-ran all 9 profiles and compared the before/after rankings. The biggest visible change was in Chill Lofi: Focus Flow (a third lofi song by a repeated artist) dropped from #3 to #5 after absorbing both an artist penalty (−1.0) and a genre penalty (−0.5), while Spacewalk Thoughts and Tropical Breeze moved up into the top 4. In profiles where every top-5 song already had a unique artist and genre — Sad Headbanger, Dead Average, BPM Perfectionist — the reranker had zero effect, confirming it only activates when repetition actually occurs.
 
 ---
 
@@ -145,6 +156,9 @@ If the user's mood doesn't exist in the catalog, or their genre has zero songs, 
 
 **3. Steepen the energy penalty at the extremes.**
 A user wanting energy 0.0 still sees high-energy songs because the linear penalty is too gentle. Using a squared gap — `(1 - gap²) × 2` instead of `(1 - gap) × 2` — would punish large energy mismatches much more heavily and make the recommendations feel right for low-energy or high-energy users.
+
+
+A post-processing reranker (`_apply_diversity_penalty`) was added that subtracts −1.0 for a repeated artist and −0.5 for a repeated genre. Penalties stack and are shown in the Why column of the output table. This is now part of the live system.
 
 ---
 
