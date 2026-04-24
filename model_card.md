@@ -1,185 +1,212 @@
-# 🎧 Model Card: Music Recommender Simulation
-
-## 1. Model Name  
-
-Give your model a short, descriptive name.  
-Example: **VibeFinder 1.0**  
-
-**AudioVerse** — a point-based music recommender that scores songs against a listener's taste profile and returns the top matches.
+# Model Card: AI Music Recommender with Self-Critique Loop
 
 ---
 
-## 2. Intended Use  
+## 1. Model Name
 
-Describe what your recommender is designed to do and who it is for. 
+**AudioVerse 2.0** — a content-based music recommender extended with a dual-evaluation self-critique loop. The system generates playlists, scores them with both heuristic metrics and a live LLM critic, and automatically refines them when quality falls below threshold.
 
-Prompts:  
-
-- What kind of recommendations does it generate  
-- What assumptions does it make about the user  
-- Is this for real users or classroom exploration  
-
-VibeMatch generates top-5 song recommendations based on a user's stated genre, mood, and energy preferences. It assumes the user already knows what they like and can express it as a profile. It is built for classroom exploration — not a production app. It should not be used as a substitute for a real music platform like Spotify, and it will not work well for users who want to discover music outside their stated taste, since the scoring actively favors songs that match the user's preferences exactly.
-
-**Intended use:** Learning how content-based filtering works, testing scoring formulas, classroom demos.  
-**Not intended for:** Real music discovery, users with niche or cross-genre tastes, catalogs larger than a few dozen songs.
+*Built on top of AudioVerse 1.0 (Modules 1–3), which was a point-based recommender without any evaluation or refinement capability.*
 
 ---
 
-## 3. How the Model Works  
+## 2. Intended Use
 
-Explain your scoring approach in simple language.  
+AudioVerse 2.0 generates top-5 song recommendations based on a user's stated mood, genre, energy level, and query. It then evaluates and iteratively improves those recommendations using a reliability scoring loop.
 
-Prompts:  
+**Intended use:**
+- Demonstrating self-critique and agentic refinement patterns in AI systems
+- Learning how content-based filtering, LLM evaluation, and iterative agent loops work together
+- Classroom and portfolio demonstrations
 
-- What features of each song are used (genre, energy, mood, etc.)  
-- What user preferences are considered  
-- How does the model turn those into a score  
-- What changes did you make from the starter logic  
+**Not intended for:**
+- Real music discovery at production scale
+- Users with niche, cross-genre, or culturally specific tastes outside the 48-song catalog
+- Replacing streaming platforms with real listening history and collaborative filtering
 
-Avoid code here. Pretend you are explaining the idea to a friend who does not program.
-
-Every song in the catalog gets a score out of 6.0 based on how well it matches what the user wants. Here is what goes into the score:
-
-- **Genre** — if the song's genre exactly matches the user's preference, it earns +2.0 points. This is the biggest factor.
-- **Mood** — if the song's mood matches, it earns +1.0 point.
-- **Energy** — the closer the song's energy level is to the user's target (on a 0 to 1 scale), the more points it earns, up to +2.0. A perfect energy match gives the full 2.0.
-- **Danceability bonus** — if the song's danceability is close to what the user prefers, it earns +0.5.
-- **Tempo bonus** — if the song's BPM falls inside a range the user set, it earns +0.5.
-
-All 18 songs are scored, then sorted from highest to lowest. The top 5 are returned along with a plain-English explanation of which features contributed to each score.
-
-**Diversity reranking (added after initial experiments):**
-After the raw scores are calculated, a second pass runs before returning the final list. It walks through the ranked candidates one slot at a time and checks whether the artist or genre has already been selected. If so, it applies a penalty to that song's score:
-- Repeated artist: −1.0 points
-- Repeated genre: −0.5 points
-
-Both penalties can stack. The adjusted score is used only for final slot ordering — the original raw score is not changed. The reason for any penalty is added to the explanation (e.g., "artist repetition penalty (−1.0)") so the output stays transparent. This means the top 5 results are now more likely to include a variety of artists and genres instead of being dominated by one.
+The system assumes users can express their preferences as a mood, genre, and energy level. It does not learn from listening behavior over time.
 
 ---
 
-## 4. Data  
+## 3. How the Model Works
 
-Describe the dataset the model uses.  
+AudioVerse 2.0 is a seven-module pipeline. Here is how each part works in plain language:
 
-Prompts:  
+### Step 1 — Recommendation Engine (Module 2)
+Every song in the catalog gets a score based on how well it matches the user's request. The scoring has two layers:
 
-- How many songs are in the catalog  
-- What genres or moods are represented  
-- Did you add or remove data  
-- Are there parts of musical taste missing in the dataset  
+**Content-based rules (up to ~6.5 points):**
+- Genre match: +2.0 if the song's genre matches the user's preferred genre
+- Mood match: +1.0 if the mood is in the user's preferences
+- Energy similarity: up to +2.0 — the closer the song's energy to the user's target, the higher the bonus
+- Danceability, tempo, and acousticness: up to +0.5 each for matching those preferences
 
-The catalog has **18 songs** stored in `data/songs.csv`. Each song has: title, artist, genre, mood, energy (0–1 scale), tempo in BPM, valence, danceability, and acousticness.
+**Embedding similarity (up to +1.0):**
+Each song is represented as a 5-number vector (energy, valence, danceability, acousticness, normalized tempo). The user's preferences are turned into the same kind of vector, and cosine similarity adds a bonus for songs that are close in that feature space.
 
-**Genres:** pop, lofi, rock, ambient, jazz, synthwave, indie pop, hip-hop, classical, electronic, soul, indie rock, reggae, country, experimental — 15 genres total, most with only 1 song. Lofi is the exception with 3.
+After scoring, a diversity reranker penalizes repeated artists (−1.0) and repeated genres (−0.5) so the final playlist has variety.
 
-**Moods:** happy, chill, intense, focused, relaxed, moody, aggressive, nostalgic, energetic, romantic, melancholic, dreamy — 12 moods total.
+### Step 2 — Heuristic Evaluator (Module 3A)
+Once a playlist is generated, it is evaluated without any AI. Five metrics are computed:
+- **Diversity score** — what fraction of songs are from unique artists
+- **Genre spread** — what fraction of songs are from unique genres
+- **Novelty score** — what fraction of songs the user has not heard before
+- **Repetition penalty** — how much any single artist dominates the list
+- **Popularity balance** — whether the energy levels are centered or all extreme
 
-No songs were added or removed. The dataset was used as-is.
+These are combined into a single heuristic score out of 10.
 
-**What's missing:** Moods like *sad*, *angry*, *peaceful*, and *uplifting* don't exist in the catalog. Genres like *metal*, *country rock*, and *R&B* have no representation. Users who prefer these will never get a genre or mood bonus — the system silently ignores those preferences.
+### Step 3 — LLM Critic (Module 3B)
+The playlist is sent to Google Gemini (gemini-2.5-flash) with a structured evaluation rubric:
+- 40% — Mood Alignment: do the songs match the requested feeling?
+- 35% — Consistency of Vibe: does the playlist hold together end-to-end?
+- 25% — Thematic Coherence: does the genre/tempo/energy form a unified experience?
 
----
+Gemini returns a score out of 10, a list of strengths, a list of actionable issue tags (such as `mood_mismatch` or `energy_mismatch`), and suggestions for improvement.
 
-## 5. Strengths  
+### Step 4 — Aggregation (Module 4)
+The two scores are blended equally:
+```
+reliability_score = 0.5 × heuristic_score + 0.5 × llm_score
+```
 
-Where does your system seem to work well  
+### Step 5 — Refinement Agent Loop (Module 5)
+If the reliability score is below 7.5 out of 10, or if any issues were flagged, the refiner adjusts the parameters and re-generates the playlist:
+- Songs with the wrong genre or mood are removed from the candidate pool
+- Artists causing repetition are excluded
+- If mood_mismatch was flagged, the mood is weighted more heavily in scoring
+- If energy_mismatch was flagged, the target energy is nudged up or down
 
-Prompts:  
+This loop runs up to 2 times. If the score improves past the threshold, it stops early.
 
-- User types for which it gives reasonable results  
-- Any patterns you think your scoring captures correctly  
-- Cases where the recommendations matched your intuition  
-
-The system works best when the user's genre and mood are both present in the catalog.
-
-- **Chill Lofi** was the strongest result — Library Rain scored a perfect 6.0/6.0 because every feature aligned: genre, mood, energy, danceability, and tempo all matched.
-- **Deep Intense Rock** also gave a strong #1 (Storm Runner at 5.98/6.0) because the genre and mood both existed in the dataset.
-- The score explanation is easy to read and clearly shows why each song was picked, which makes the output feel trustworthy.
-- The energy similarity formula works well as a ranking layer within genre groups — small energy differences produce small score differences, which feels proportional.
-- The terminal output now uses a formatted ASCII table (via `tabulate`) with columns for rank, song/artist, score, and reasons. Each scoring reason appears on its own line inside the Why column, including any diversity penalties, making it easy to compare results across profiles at a glance.
-- The diversity reranker visibly improves variety in profiles where the dataset clusters heavily around one genre. For Chill Lofi, Spacewalk Thoughts and Tropical Breeze now appear in the top 5 instead of a third lofi song, which feels more like real discovery.
-
----
-
-## 6. Limitations and Bias 
-
-Where the system struggles or behaves unfairly. 
-
-Prompts:  
-
-- Features it does not consider  
-- Genres or moods that are underrepresented  
-- Cases where the system overfits to one preference  
-- Ways the scoring might unintentionally favor some users  
-
-**Discovered weakness — Genre gatekeeping creates a filter bubble:**
-The most significant weakness discovered during experimentation is that the genre match carries so much weight (+2.0 out of a maximum 5.0 points, or 40% of the total score) that it effectively locks users inside a single-genre bubble. During testing, the "Rooftop Lights" song — which is labeled *indie pop* rather than *pop* — was penalized the full 2.0 points compared to "Gym Hero," a pop song whose mood (*intense*) completely contradicts what a happy, high-energy pop user actually wants; yet Gym Hero still ranked higher purely because of the genre label. This means the system can recommend a song that *feels* wrong while ignoring one that *sounds* right, just because of a one-word label difference. The problem is compounded by the fact that the dataset contains only one or two songs per genre for most categories, so a user whose preferred genre is underrepresented (such as *metal* or *ambient*) immediately loses access to the genre bonus for every single song and receives recommendations driven almost entirely by energy similarity alone — a much weaker signal. A fairer design would award partial credit for related genres (for example, *indie pop* scoring 1.5 instead of 0 against a *pop* preference), which would reduce the filter bubble without removing genre as a useful feature.
+### Step 6 — Logging (Module 6)
+Every run is appended to `logs/pipeline.jsonl` with the full input, both playlists, all scores, issues, feedback, and iteration count. Human feedback (optional star ratings) is stored separately in `logs/human_feedback.jsonl`.
 
 ---
 
-## 7. Evaluation  
+## 4. Data
 
-How you checked whether the recommender behaved as expected. 
+The catalog has **48 songs** stored in `data/songs.csv`. Each song has: id, title, artist, genre, mood, energy (0–1), tempo in BPM, valence, danceability, and acousticness.
 
-Prompts:  
+**Genre distribution (selected):**
+- lofi: 14 songs
+- rock: 11 songs (expanded from 1 in v1.0 to support the deep_rock profile)
+- ambient: 5 songs
+- jazz: 3 songs
+- Other genres (1–2 each): pop, synthwave, hip-hop, classical, electronic, soul, indie rock, reggae, country, experimental, indie pop
 
-- Which user profiles you tested  
-- What you looked for in the recommendations  
-- What surprised you  
-- Any simple tests or comparisons you ran  
+**Mood distribution (selected):**
+- chill: 11 songs
+- focused: 7 songs
+- intense / aggressive / energetic: 11 songs combined
+- Other moods (1–3 each): happy, relaxed, melancholic, moody, romantic, peaceful, dreamy, nostalgic
 
-No need for numeric metrics unless you created some.
+**Changes from v1.0:**
+- Original catalog had 18 songs. Expanded to 48 by adding 20 lofi/ambient/jazz songs and 10 high-energy rock songs.
+- The rock expansion was necessary after testing revealed the refiner produced completely off-genre results when only 1 rock song existed in the catalog.
 
-I tested the first three profiles — High-Energy Pop, Chill Lofi, and Deep Intense Rock — by running the recommender and checking whether the top-5 results matched what I would intuitively expect for each listener type. For High-Energy Pop, I looked at whether the top song matched on both genre and mood, and whether the score gap between #1 and #2 was meaningful. What I found was that mood acted as a decisive tiebreaker within the same genre: Sunrise City (pop, happy) ranked above Gym Hero (pop, intense) by exactly 1.0 point — the mood bonus — even though Gym Hero had a slightly closer energy match. To confirm this, I temporarily disabled the mood check entirely and observed that Gym Hero immediately jumped to #1, while Sunrise City fell to #2. This experiment revealed that mood is a critical factor specifically when two songs share the same genre, since the genre bonus already equalizes their base scores and mood becomes the only meaningful differentiator. However, mood alone could not overcome a genre mismatch — Rooftop Lights, which correctly matched the happy mood, still ranked far below both pop songs because it lost the full 2.0-point genre bonus. The mood check was restored after this experiment.
-
-After adding the diversity reranker, I re-ran all 9 profiles and compared the before/after rankings. The biggest visible change was in Chill Lofi: Focus Flow (a third lofi song by a repeated artist) dropped from #3 to #5 after absorbing both an artist penalty (−1.0) and a genre penalty (−0.5), while Spacewalk Thoughts and Tropical Breeze moved up into the top 4. In profiles where every top-5 song already had a unique artist and genre — Sad Headbanger, Dead Average, BPM Perfectionist — the reranker had zero effect, confirming it only activates when repetition actually occurs.
+**What's still missing:**
+- Genres with zero representation: metal, R&B, Latin, K-pop, country rock, blues
+- Moods like *angry*, *uplifting*, *nostalgic* are sparse
+- No song lyrics, release year, or popularity signals
+- No real user listening history
 
 ---
 
-## 8. Future Work  
+## 5. Strengths
 
-Ideas for how you would improve the model next.  
+**Self-correction works.** When the initial playlist contains off-genre or off-mood songs, the refinement loop reliably replaces them. The deep_rock profile went from a 5.33 reliability score (initial playlist included indie pop and hip-hop) to 8.3+ after one refinement iteration once the catalog had sufficient rock songs.
 
-Prompts:  
+**Dual evaluation catches different failure modes.** The heuristic evaluator catches structural problems (too many songs from one artist, low genre diversity). The LLM critic catches semantic problems (songs that are technically diverse but tonally incompatible). Neither alone is sufficient — a maximally diverse but off-genre playlist scored 9.84 heuristically but 1.0 from the LLM.
 
-- Additional features or preferences  
-- Better ways to explain recommendations  
-- Improving diversity among the top results  
-- Handling more complex user tastes  
+**Graceful degradation.** If the Gemini API is unavailable (quota exceeded, network error, invalid key), the pipeline continues with heuristic-only scoring instead of crashing. The fallback is logged and visible in the output.
+
+**Transparent scoring.** Every recommendation includes the specific features that contributed to its score. Every evaluation includes the exact issues flagged. The system never makes a decision without leaving an auditable trail.
+
+**Works well for well-represented profiles.** Chill lofi, sad/hopeful, and romantic evening profiles all produce playlists with reliability scores above 8.0 without requiring refinement.
+
+---
+
+## 6. Limitations and Bias
+
+**Genre gatekeeping (inherited from v1.0, partially mitigated):**
+The genre match bonus (+2.0) is still the single largest scoring factor — 40% of the non-embedding score. A song in an adjacent genre (indie rock vs rock, indie pop vs pop) scores 0 on genre even if it sounds identical. This was identified in v1.0 and remains in v2.0 as a known limitation. The LLM critic now partially compensates by flagging genre mismatch issues, which trigger the refiner to use a mood-family-aware filter instead of strict genre matching.
+
+**Small catalog limits refinement quality:**
+Even at 48 songs, some genre/mood combinations have very few candidates. A user requesting *romantic R&B* or *angry metal* will find no genre matches at all. The refiner cannot produce a good playlist from nothing — it can only rerank what exists.
+
+**Mood family mapping is hand-coded:**
+The refiner uses a hardcoded dictionary of compatible moods (e.g., "intense" accepts {intense, aggressive, energetic, moody}). This is a reasonable approximation but will fail for moods not in the map, defaulting to exact match only.
+
+**LLM scores reflect training data bias:**
+Gemini evaluates playlists through the lens of its training data, which is predominantly Western, English-language music culture. A playlist of traditional instruments or regional genres may be scored lower due to unfamiliarity, not actual quality.
+
+**50/50 weighting is not empirically tuned:**
+The equal blend of heuristic and LLM scores was chosen as a reasonable default. It has not been calibrated against real user satisfaction data. Human feedback is now being collected via `--feedback` for future retuning.
+
+**Refinement can loop without improvement:**
+If both iterations produce poor playlists (because the catalog has no good alternatives), the pipeline terminates with a low reliability score rather than escalating or explaining why it could not improve. A future version should detect this and surface a clearer message.
+
+---
+
+## 7. Evaluation
+
+### Automated testing
+23 unit tests cover all modules independently. The LLM is mocked in tests so they run offline and deterministically. All 23 pass.
+
+```
+python -m pytest tests/test_pipeline.py -v
+```
+
+### Live profile testing (5 profiles)
+
+| Profile | Initial Reliability | Final Reliability | Iterations |
+|---|---|---|---|
+| chill_lofi | 8.30 | 8.30 | 0 |
+| sad_hopeful | 8.05 | 8.05 | 0 |
+| romantic_evening | 7.90 | 7.90 | 0 |
+| high_energy_workout | 7.60 | 8.10 | 1 |
+| deep_rock | 5.33 | 8.30 | 1 |
+
+Profiles with well-represented genres in the catalog (lofi, ambient) pass on the first attempt. Profiles that initially mix off-genre songs (deep_rock, workout) trigger refinement and improve.
+
+### Key evaluation finding
+A refined playlist once scored 9.84/10 heuristically but 1.0/10 from the LLM. The heuristic rewarded its perfect genre diversity (every song from a different genre), while the LLM correctly identified that the genres were entirely wrong for the query. This confirmed that both evaluators are necessary — the heuristic alone can be gamed by structural correctness without semantic relevance.
+
+---
+
+## 8. Future Work
 
 **1. Partial genre credit.**
-Related genres like *indie pop* and *pop* or *indie rock* and *rock* are musically very similar but currently score the same as completely unrelated genres. Giving partial credit (e.g., +1.5 for a close genre instead of +2.0 or 0) would reduce the filter bubble and let good songs from adjacent genres surface.
+Related genres (indie pop / pop, indie rock / rock) should earn partial credit (+1.5) instead of zero. This would reduce the filter bubble without removing genre as a signal. This was identified in v1.0 and remains the highest-priority scoring improvement.
 
-**2. Warn the user when a preference goes unmatched.**
-If the user's mood doesn't exist in the catalog, or their genre has zero songs, the system should say so clearly. Right now it silently returns results that feel off with no explanation. A simple line like "Note: no songs matched your mood preference" would make the output honest.
+**2. Expand the catalog to 200+ songs.**
+The refinement loop is only as good as the catalog it draws from. With 48 songs, several genre/mood combinations have 1–2 representatives. A larger catalog would make the refiner meaningfully more powerful, particularly for rock, R&B, and metal profiles.
 
-**3. Steepen the energy penalty at the extremes.**
-A user wanting energy 0.0 still sees high-energy songs because the linear penalty is too gentle. Using a squared gap — `(1 - gap²) × 2` instead of `(1 - gap) × 2` — would punish large energy mismatches much more heavily and make the recommendations feel right for low-energy or high-energy users.
+**3. Calibrate the 50/50 score weighting using human feedback.**
+Human feedback is now being collected via `--feedback`. Once enough ratings are gathered, a simple regression could determine whether heuristic or LLM scores better predict user satisfaction — and adjust the blend accordingly.
 
+**4. Steepen the energy penalty at the extremes.**
+Using a squared gap `(1 - gap²) × 2` instead of a linear gap would punish large energy mismatches more aggressively, improving results for extreme energy profiles (workout, ambient sleep).
 
-A post-processing reranker (`_apply_diversity_penalty`) was added that subtracts −1.0 for a repeated artist and −0.5 for a repeated genre. Penalties stack and are shown in the Why column of the output table. This is now part of the live system.
+**5. Add a "no good candidates" warning.**
+When the refiner cannot find enough genre/mood-matching songs in the catalog, it should surface an explicit message instead of silently returning a low-quality playlist with a poor reliability score.
+
+**6. Connect to a real music API.**
+Replace the static CSV with a Spotify or MusicBrainz integration so the catalog scales to millions of songs and recommendations are based on real audio features.
 
 ---
 
-## 9. Personal Reflection  
+## 9. Personal Reflection
 
-A few sentences about your experience.  
+**What the self-critique loop taught me:**
+Building AudioVerse 1.0 showed me that scoring formulas produce explainable results. Building AudioVerse 2.0 showed me that explainability is not the same as correctness. A system can explain every point in its score and still recommend the wrong thing, because the formula itself has gaps the numbers cannot capture. Adding the LLM critic was not about making the system smarter — it was about adding a different *kind* of judgment that the heuristics structurally cannot provide.
 
-Prompts:  
+**The most surprising failure:**
+The 9.84/10 heuristic score for a completely wrong playlist was genuinely surprising. The refiner had replaced lofi songs with reggae, classical, and country. Each song was from a unique artist and genre — perfect structural diversity. The heuristic had no way to know that none of those genres were what the user asked for. That single failure made the dual-evaluation design feel necessary rather than optional.
 
-- What you learned about recommender systems  
-- Something unexpected or interesting you discovered  
-- How this changed the way you think about music recommendation apps  
+**What changed from v1.0:**
+In v1.0 the biggest lesson was that genre weight dominates everything. In v2.0 the biggest lesson was that individual metrics can all be correct while collectively missing the point. Diversity is good. Novelty is good. Genre spread is good. But a playlist can maximize all three and still be wrong. The only way to catch that is with a signal that understands the *meaning* of the request — which is exactly what the LLM critic provides.
 
-**Biggest learning moment:**
-I expected genre to matter, but not *this much*. Seeing Gym Hero (wrong mood, same genre) beat Rooftop Lights (right mood, wrong genre label) made it clear that a single weight choice can quietly dominate an entire system. The number 2.0 looks harmless until you realize it's 40% of the max score and nothing else can reliably overcome it.
-
-**How AI tools helped, and when I double-checked:**
-AI helped me quickly spot patterns across all 9 profiles at once and interpret score differences. But I still needed to verify the math by hand — for example, confirming that `(1 - |0.9 - 0.82|) × 2 = 1.84` actually matched the code output. AI explains patterns confidently even when the numbers are slightly off, so checking the raw terminal output against the formula directly was important.
-
-**What surprised me about simple algorithms:**
-The recommendations *feel* real even though the logic is just addition. When Library Rain scored 6.0/6.0 for a Chill Lofi user, it genuinely seemed like the right pick. We don't need a neural network to produce a result that feels correct. Simple recommendation can do the job with the right features and reasonable weights.
-
-**What I'd try next:**
-I'd expand the catalog to at least 100 songs so each genre has several representatives. With only 18 songs, one missing genre breaks the entire experience for that user type. I'd also add a diversity mode that forces the top-5 to include at least 3 different genres, so users occasionally discover something outside their usual taste instead of seeing the same genre repeated back five times.
+**On AI collaboration:**
+This project was built collaboratively with an AI assistant. The human feedback module was a suggestion I had not planned — it added a real evaluation dimension beyond automated metrics. The initial JSON parsing approach was a flaw that only surfaced in production when Gemini returned trailing commas that Python's `json` module could not parse. Both experiences reinforced the same lesson: AI suggestions are a starting point, not a final answer. The real work is testing them against reality.
