@@ -5,7 +5,7 @@ Usage:
     python -m src.run_pipeline
     python -m src.run_pipeline --analytics
 
-Requires ANTHROPIC_API_KEY in environment or .env file.
+Requires OPENAI_API_KEY in environment or .env file.
 """
 from __future__ import annotations
 
@@ -104,11 +104,12 @@ def main() -> None:
         print_analytics()
         return
 
-    if not os.environ.get("ANTHROPIC_API_KEY"):
+    if not os.environ.get("GEMINI_API_KEY"):
         print(
-            "\n[ERROR] ANTHROPIC_API_KEY is not set.\n"
+            "\n[ERROR] GEMINI_API_KEY is not set.\n"
             "  Copy .env.example to .env and add your key, or:\n"
-            "  export ANTHROPIC_API_KEY=your_key_here\n"
+            "  export GEMINI_API_KEY=your_key_here\n"
+            "  Get a free key at: https://aistudio.google.com/app/apikey\n"
         )
         sys.exit(1)
 

@@ -74,13 +74,13 @@ def run_recommendation_pipeline(
 
         if not should_refine(evaluation, threshold=threshold):
             if verbose:
-                print(f"  ✓ Reliability {evaluation.reliability_score}/10 "
-                      f"≥ {threshold} and no issues — stopping.\n")
+                print(f"  [OK] Reliability {evaluation.reliability_score}/10 "
+                      f">= {threshold} and no issues -- stopping.\n")
             break
 
         if iteration < max_iterations - 1:
             if verbose:
-                print(f"  ↻ Refining (iteration {iteration + 1}/{max_iterations})…\n")
+                print(f"  >> Refining (iteration {iteration + 1}/{max_iterations})...\n")
             playlist = refine_playlist(
                 user_input, playlist, evaluation, catalog=catalog, k=k
             )
@@ -122,18 +122,18 @@ def run_recommendation_pipeline(
 # ---------------------------------------------------------------------------
 
 def _print_playlist(title: str, playlist: Playlist) -> None:
-    print(f"\n{'─' * 56}")
+    print(f"\n{'-' * 56}")
     print(f"  {title}")
-    print(f"{'─' * 56}")
+    print(f"{'-' * 56}")
     for i, s in enumerate(playlist.songs, 1):
         print(f"  {i}. {s.title:<28} {s.artist:<18} [{s.genre} | {s.mood}]")
     print()
 
 
 def _print_evaluation(evaluation: EvaluationResult, iteration: int) -> None:
-    print(f"{'─' * 56}")
+    print(f"{'-' * 56}")
     print(f"  Evaluation (iteration {iteration})")
-    print(f"{'─' * 56}")
+    print(f"{'-' * 56}")
     m = evaluation.heuristic_metrics
     print(f"  Heuristic  : {evaluation.heuristic_score:>5.2f}/10  "
           f"(diversity={m.get('diversity_score', 0):.2f}, "

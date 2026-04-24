@@ -17,3 +17,23 @@ id,title,artist,genre,mood,energy,tempo_bpm,valence,danceability,acousticness
 16,Broken Strings,Echo Static,indie rock,melancholic,0.68,115,0.42,0.71,0.45
 17,Tropical Breeze,Island Vibes,reggae,chill,0.52,90,0.72,0.58,0.81
 18,Digital Dreams,Glitch Theory,experimental,dreamy,0.61,105,0.68,0.47,0.25
+19,Rain Study Session,Hazy Tape,lofi,focused,0.36,74,0.55,0.57,0.84
+20,Soft Glow,Pastel Fog,lofi,chill,0.33,70,0.61,0.53,0.88
+21,Late Night Pages,Velvet Desk,lofi,focused,0.39,76,0.58,0.55,0.82
+22,Amber Morning,Drift Collective,lofi,chill,0.41,82,0.63,0.60,0.79
+23,Quiet Hours,Still Frame,lofi,peaceful,0.30,68,0.57,0.48,0.90
+24,Pencil Sketch,Hazy Tape,lofi,focused,0.38,77,0.54,0.56,0.85
+25,Cozy Corner,Velvet Desk,lofi,chill,0.34,71,0.62,0.52,0.87
+26,Dusk Melody,Paper Lanterns,lofi,relaxed,0.37,75,0.65,0.54,0.83
+27,Overcast Afternoon,Drift Collective,lofi,chill,0.35,73,0.59,0.50,0.88
+28,Bookshelf Beats,Still Frame,lofi,focused,0.40,79,0.56,0.58,0.81
+29,Mellow Signal,Pastel Fog,lofi,chill,0.32,69,0.60,0.51,0.89
+30,Tea and Rain,Hazy Tape,lofi,peaceful,0.31,67,0.64,0.46,0.92
+31,Campus Walk,Drift Collective,lofi,happy,0.44,84,0.70,0.63,0.76
+32,Faded Cassette,Velvet Desk,lofi,nostalgic,0.43,80,0.66,0.59,0.80
+33,Gentle Waves,Orbit Bloom,ambient,peaceful,0.25,58,0.68,0.38,0.94
+34,Forest Path,Nature Sound,ambient,chill,0.22,55,0.70,0.35,0.96
+35,Sunday Afternoon,Slow Stereo,jazz,relaxed,0.40,88,0.73,0.56,0.87
+36,Blue Note Cafe,Midnight Keys,jazz,chill,0.38,85,0.69,0.52,0.85
+37,Floating Islands,Orbit Bloom,ambient,dreamy,0.27,62,0.66,0.40,0.93
+38,Starlight Study,Pastel Fog,lofi,focused,0.37,76,0.57,0.55,0.84

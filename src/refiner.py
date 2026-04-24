@@ -84,14 +84,22 @@ def refine_playlist(
 
     issues = evaluation.issues
 
-    # Excluded song IDs: current playlist + history
-    current_ids = {s.id for s in playlist.songs}
-    excluded_ids = set(current_ids)
-
-    # Excluded artists
+    # Identify songs to remove: those with bad genre/mood fit
+    target_genre = user_input.favorite_genre.lower() if user_input.favorite_genre else ""
+    target_mood = user_input.mood.lower()
+    bad_song_ids = {
+        s.id for s in playlist.songs
+        if (target_genre and s.genre.lower() != target_genre)
+        or s.mood.lower() not in (target_mood, "focused", "relaxed", "chill", "peaceful")
+    }
+    # Always exclude songs already flagged by bad artists (repetition issues)
     bad_artists = _extract_excluded_artists(playlist, issues)
+    bad_song_ids |= {s.id for s in playlist.songs if s.artist in bad_artists}
 
-    # Filter catalog: remove bad-artist songs and already-seen songs
+    # Keep good songs from current playlist in the pool; only remove the bad ones
+    excluded_ids = bad_song_ids
+
+    # Filter catalog
     refined_catalog = [
         s for s in catalog
         if s.id not in excluded_ids and s.artist not in bad_artists
