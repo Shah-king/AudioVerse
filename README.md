@@ -4,6 +4,18 @@ A content-based music recommendation system that evaluates and iteratively refin
 
 ---
 
+## Portfolio
+
+**GitHub:** [https://github.com/Shahriar-ferdous/applied-ai-system-project](https://github.com/Shahriar-ferdous/applied-ai-system-project)
+
+**Loom Walkthrough:** *(add your Loom link here after recording)*
+
+### What this project says about me as an AI engineer
+
+This project reflects my ability to think beyond the initial solution and ask harder questions — not just "does it recommend songs?" but "how do we know the recommendations are good, and what happens when they aren't?" Designing a self-critique loop required me to treat evaluation as a first-class engineering problem, not an afterthought. Working through real failures — LLM quota errors, malformed JSON, a refiner that produced confidently wrong results — taught me that robust AI systems are built at the seams between components, not just within them. I am an engineer who ships working systems, debugs them against real API behavior, and builds in the fallbacks and observability that make AI trustworthy in practice.
+
+---
+
 ## Original Project (Modules 1–3): AudioVerse
 
 The original project, **AudioVerse**, was a rule-based music recommender built in Modules 1–3. It scored songs against a user profile using a 6.5-point rubric (genre match, mood, energy similarity, tempo, danceability, acousticness) and applied a diversity reranker to penalize repeated artists and genres. AudioVerse demonstrated how content-based filtering works without any machine learning — every recommendation was fully explainable by a point breakdown. Its limitations were a fixed scoring formula with no feedback loop and no semantic understanding of *why* a playlist felt right or wrong.
