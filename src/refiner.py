@@ -87,10 +87,27 @@ def refine_playlist(
     # Identify songs to remove: those with bad genre/mood fit
     target_genre = user_input.favorite_genre.lower() if user_input.favorite_genre else ""
     target_mood = user_input.mood.lower()
+
+    # Build a mood family: moods that are compatible with the user's requested mood
+    _MOOD_FAMILIES: dict[str, set[str]] = {
+        "intense":     {"intense", "aggressive", "energetic", "moody"},
+        "aggressive":  {"aggressive", "intense", "energetic"},
+        "energetic":   {"energetic", "intense", "aggressive", "happy"},
+        "happy":       {"happy", "energetic", "relaxed"},
+        "chill":       {"chill", "peaceful", "relaxed", "focused"},
+        "relaxed":     {"relaxed", "chill", "peaceful", "focused"},
+        "melancholic": {"melancholic", "nostalgic", "peaceful", "moody"},
+        "sad":         {"sad", "melancholic", "peaceful"},
+        "romantic":    {"romantic", "relaxed", "chill"},
+        "focused":     {"focused", "chill", "peaceful", "relaxed"},
+        "peaceful":    {"peaceful", "chill", "relaxed"},
+    }
+    acceptable_moods = _MOOD_FAMILIES.get(target_mood, {target_mood})
+
     bad_song_ids = {
         s.id for s in playlist.songs
         if (target_genre and s.genre.lower() != target_genre)
-        or s.mood.lower() not in (target_mood, "focused", "relaxed", "chill", "peaceful")
+        or s.mood.lower() not in acceptable_moods
     }
     # Always exclude songs already flagged by bad artists (repetition issues)
     bad_artists = _extract_excluded_artists(playlist, issues)

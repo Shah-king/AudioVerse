@@ -37,3 +37,13 @@ id,title,artist,genre,mood,energy,tempo_bpm,valence,danceability,acousticness
 36,Blue Note Cafe,Midnight Keys,jazz,chill,0.38,85,0.69,0.52,0.85
 37,Floating Islands,Orbit Bloom,ambient,dreamy,0.27,62,0.66,0.40,0.93
 38,Starlight Study,Pastel Fog,lofi,focused,0.37,76,0.57,0.55,0.84
+39,Iron Curtain,Voltline,rock,intense,0.94,158,0.44,0.70,0.06
+40,Redline,Throttle Kings,rock,aggressive,0.96,162,0.46,0.72,0.04
+41,Asphalt Anthem,Road Fury,rock,intense,0.90,148,0.50,0.68,0.08
+42,Burn the Sky,Ember Riot,rock,aggressive,0.93,155,0.42,0.65,0.05
+43,Highway Thunder,Throttle Kings,rock,energetic,0.89,145,0.55,0.73,0.07
+44,Static Override,Voltline,rock,intense,0.92,153,0.47,0.69,0.06
+45,Pressure Drop,Ember Riot,rock,aggressive,0.91,150,0.43,0.67,0.05
+46,Dark Engine,Road Fury,rock,moody,0.85,140,0.39,0.64,0.09
+47,Collision Course,Throttle Kings,rock,intense,0.95,160,0.48,0.71,0.04
+48,Bloodline Drive,Ember Riot,rock,aggressive,0.93,157,0.44,0.66,0.05
