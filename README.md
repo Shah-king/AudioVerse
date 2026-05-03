@@ -124,14 +124,46 @@ Available profiles:
 | `deep_rock` | intense | deep intense rock for a long drive |
 | `romantic_evening` | romantic | romantic soul for a dinner evening |
 
-### 5. Optional flags
+### 5. Launch the interactive UI
+
+From the project root:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+Streamlit will print a local URL like:
+
+```text
+Local URL: http://localhost:8501
+```
+
+Open `http://localhost:8501` in your browser to use the app.
+
+The UI lets users choose a preset or custom mood, genre, energy, danceability,
+tempo range, playlist size, reliability threshold, and refinement passes. It
+then displays the generated playlist, reliability scoring, critic feedback,
+catalog browser, and run-history analytics.
+
+If `GEMINI_API_KEY` is not set, playlist generation still works with the
+existing heuristic fallback for the LLM critic.
+
+To stop the app, press `Ctrl+C` in the terminal running Streamlit. If it is
+running in the background on Windows, find the process using port `8501`:
+
+```powershell
+netstat -ano | findstr :8501
+Stop-Process -Id <PID>
+```
+
+### 6. Optional flags
 
 ```bash
 python -m src.run_pipeline --profile deep_rock --feedback   # rate the playlist 1-5
 python -m src.run_pipeline --analytics                      # view score trends from past runs
 ```
 
-### 6. Run tests
+### 7. Run tests
 
 ```bash
 python -m pytest tests/test_pipeline.py -v

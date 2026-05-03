@@ -83,6 +83,10 @@ def refine_playlist(
         catalog = load_catalog()
 
     issues = evaluation.issues
+    has_diversity_issue = any(
+        "low_diversity" in issue or "high_repetition" in issue
+        for issue in issues
+    )
 
     # Identify songs to remove: those with bad genre/mood fit
     target_genre = user_input.favorite_genre.lower() if user_input.favorite_genre else ""
@@ -112,6 +116,9 @@ def refine_playlist(
     # Always exclude songs already flagged by bad artists (repetition issues)
     bad_artists = _extract_excluded_artists(playlist, issues)
     bad_song_ids |= {s.id for s in playlist.songs if s.artist in bad_artists}
+
+    if has_diversity_issue and not bad_artists and playlist.songs:
+        bad_song_ids.add(playlist.songs[-1].id)
 
     # Keep good songs from current playlist in the pool; only remove the bad ones
     excluded_ids = bad_song_ids
