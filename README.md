@@ -4,6 +4,22 @@ A content-based music recommendation system that evaluates and iteratively refin
 
 ---
 
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Language** | Python 3.11 |
+| **LLM / AI** | Google Gemini 2.5 Flash (`google-genai` SDK) |
+| **Recommendation Engine** | Custom content-based filtering with cosine similarity (NumPy) |
+| **Data** | Hand-curated CSV catalog (Pandas) |
+| **UI** | Streamlit |
+| **Testing** | Pytest + `unittest.mock` (23 tests, fully offline) |
+| **Logging** | JSONL flat-file logging (`logs/pipeline.jsonl`) |
+| **Config** | `python-dotenv` for API key management |
+| **Version Control** | Git + GitHub |
+
+---
+
 ## Portfolio
 
 **GitHub:** [https://github.com/Shahriar-ferdous/applied-ai-system-project](https://github.com/Shahriar-ferdous/applied-ai-system-project)
